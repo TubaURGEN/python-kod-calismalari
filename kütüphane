@@ -1,0 +1,142 @@
+import json
+# Kitap Sınıfı Tanımlama: Bu sınıf, her bir kitabın temel özelliklerini (ad, yazar, kod, adet) ve ödünç alma durumu gibi ek özellikleri içerir. 
+# Ödünç alma durumu, ödünç alan kişi ve iade eden kişi bilgilerini takip etmek için eklenmiştir.
+class Kitap: # Kitap sınıfı: Her bir kitabın özelliklerini ve ödünç alma durumunu takip eder.
+    def __init__(self, ad, yazar, kod, adet, odunc_durumu=None, odunc_alan=None, iade_eden=None):
+        self.ad = ad
+        self.yazar = yazar
+        self.kod = kod
+        self.adet = adet
+        self.odunc_durumu = odunc_durumu
+        self.odunc_alan = odunc_alan
+        self.iade_eden = iade_eden
+
+def kitaplari_yukle(): # "kitaplar.json" dosyasından kitap verilerini yükler. Eğer dosya bulunamazsa boş bir liste döndürür.
+    try:
+        with open("kitaplar.json", "r") as file:
+            kitaplar_veri = json.load(file)
+            return [Kitap(**kitap) for kitap in kitaplar_veri]
+    except FileNotFoundError:
+        return []
+
+def kitaplari_kaydet():   # mevcut kitap verilerini "kitaplar.json" dosyasına kaydeder
+    with open("kitaplar.json", "w") as file:
+        kitaplar_veri = [vars(kitap) for kitap in kitaplar]
+        json.dump(kitaplar_veri, file)
+
+kitaplar = kitaplari_yukle()
+
+def kitap_ekle(): # kullanıcıdan alınan bilgilerle yeni bir kitap oluşturur ve kitapları güncelleyerek kaydeder
+    ad = input("Kitap Adı: ")
+    yazar = input("Yazarı: ")
+    kod = input("Kitap Kodu: ")
+    adet = input("Adet: ")
+
+    yeni_kitap = Kitap(ad, yazar, kod, adet)
+    kitaplar.append(yeni_kitap)
+    kitaplari_kaydet()
+    print("Kitap başarıyla eklendi.")
+
+def kitap_sil(): # Kullanıcıdan alınan kitap adına göre kitabı listeden siler
+    ad = input("Silinecek Kitap Adı: ")
+    global kitaplar
+    kitaplar = [kitap for kitap in kitaplar if kitap.ad.lower() != ad.lower()]
+    kitaplari_kaydet()
+    print(f"{ad} adlı kitap silindi.")
+
+def kitap_sorgula(): #  Kullanıcıdan alınan seçime göre kitapları sorgular ve belirtilen kriterlere uygun kitapları gösterir
+    if len(kitaplar) == 0:
+        print("Henüz kitap eklenmemiş.")
+        return
+
+    print("Sorgulama seçeneği:")
+    print("1 - Kitap Adına Göre")
+    print("2 - Yazarına Göre")
+    print("3 - Tüm Kitapları Göster")
+    sorgu_secim = input("Seçiminiz (1/2/3): ")
+
+    if sorgu_secim == '1':
+        sorgulanan_ad = input("Kitap Adı: ")
+        bulunan_kitaplar = [kitap for kitap in kitaplar if kitap.ad.lower() == sorgulanan_ad.lower()]
+    elif sorgu_secim == '2':
+        sorgulanan_yazar = input("Yazarı: ")
+        bulunan_kitaplar = [kitap for kitap in kitaplar if kitap.yazar.lower() == sorgulanan_yazar.lower()]
+    elif sorgu_secim == '3':
+        bulunan_kitaplar = kitaplar
+    else:
+        print("Geçersiz seçim.")
+        return
+
+    if not bulunan_kitaplar:
+        print("Aradığınız kriterlere uygun kitap bulunamadı.")
+        return
+
+    for kitap in bulunan_kitaplar:
+        print("-------------------")
+        print(f"Kitap Adı: {kitap.ad}")
+        print(f"Yazarı: {kitap.yazar}")
+        print(f"Kitap Kodu: {kitap.kod}")
+        print(f"Adet: {kitap.adet}")
+        if kitap.odunc_durumu == "Ödünç Verildi":
+            print(f"Ödünç Alan: {kitap.odunc_alan}")
+        if kitap.iade_eden:
+            print(f"İade Eden: {kitap.iade_eden}")
+        print("-------------------")
+
+# Kullanıcıdan alınan kitap adına göre ödünç verilecek kişiyi belirler ve kaydeder.        
+def kitap_odunc_ver():
+    ad = input("Ödünç verilecek Kitap Adı: ")
+    kime = input("Ödünç alanın adı: ")
+
+    for kitap in kitaplar:
+        if kitap.ad.lower() == ad.lower() and kitap.odunc_durumu is None:
+            kitap.odunc_durumu = "Ödünç Verildi"
+            kitap.odunc_alan = kime
+            kitaplari_kaydet()
+            print(f"{ad} adlı kitap {kime} isimli kişiye ödünç verildi.")
+            return
+
+    print("Kitap bulunamadı veya zaten ödünç verilmiş.")
+
+# Kullanıcıdan alınan kitap adına göre iade edilecek kişiyi belirler ve kaydeder
+def kitap_iade_et():
+    ad = input("İade edilecek Kitap Adı: ")
+    iade_eden = input("İade eden kişinin adı: ")
+
+    for kitap in kitaplar:
+        if kitap.ad.lower() == ad.lower() and kitap.odunc_durumu == "Ödünç Verildi":
+            kitap.odunc_durumu = None
+            kitap.iade_eden = iade_eden
+            kitaplari_kaydet()
+            print(f"{ad} adlı kitap {iade_eden} tarafından iade edildi.")
+            return
+
+    print("Kitap bulunamadı veya ödünç verilmemiş.")
+
+# Ana döngü: Kullanıcıya seçenekleri sunar ve seçilen işlemi gerçekleştirir
+while True:
+    print("\n1 - Kitap Ekle")
+    print("2 - Kitapları Sorgula")
+    print("3 - Kitap Ödünç Ver")
+    print("4 - Kitap İade Et")
+    print("5 - Kitap Sil")
+    print("6 - Çıkış")
+    secim = input("Seçiminiz (1/2/3/4/5/6): ")
+
+    if secim == '1':
+        kitap_ekle()
+    elif secim == '2':
+        kitap_sorgula()
+    elif secim == '3':
+        kitap_odunc_ver()
+    elif secim == '4':
+        kitap_iade_et()
+    elif secim == '5':
+        kitap_sil()
+    elif secim == '6':
+        print("Programdan çıkılıyor.")
+        break
+    else:
+        print("-------------------")
+        print("Geçersiz seçim. Lütfen tekrar deneyin.")
+        print("-------------------")
